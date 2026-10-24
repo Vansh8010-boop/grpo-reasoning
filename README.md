@@ -3,12 +3,19 @@
 Teaching Qwen2.5-1.5B-Instruct to solve math problems better with GRPO
 (Group Relative Policy Optimization), implemented from scratch in PyTorch with LoRA.
 
-Status: setup (week 0). The results table goes here once there are numbers.
+Status: week 1 done (evaluation harness and baselines, see [docs/week1.md](docs/week1.md)).
 
 | Model | GSM8K test | MATH-500 | SVAMP | Avg response length |
 |---|---|---|---|---|
-| Qwen2.5-1.5B-Instruct (base) | – | – | – | – |
+| Qwen2.5-1.5B-Instruct (base) | 75.8% | 55.8% | 83.2% | 303 tokens (GSM8K) |
 | + GRPO (this repo) | – | – | – | – |
+
+## Reproduce the evaluation
+
+```
+python -m eval.harness --model Qwen/Qwen2.5-1.5B-Instruct --dtype float16 --out results/base-1.5b
+python -m pytest -q tests/
+```
 
 ## Layout
 

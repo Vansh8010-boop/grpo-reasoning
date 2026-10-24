@@ -1,0 +1,46 @@
+{
+  "config": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "adapter": null,
+    "datasets": "gsm8k,math500,svamp",
+    "backend": "vllm",
+    "limit": null,
+    "n_samples": 1,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "max_tokens": 1024,
+    "dtype": "float16",
+    "seed": 0,
+    "batch_size": 16,
+    "gpu_mem": 0.85,
+    "max_model_len": 2048,
+    "out": "/kaggle/working/results/base-0.5b"
+  },
+  "datasets": {
+    "gsm8k": {
+      "n": 1319,
+      "accuracy": 0.49128127369219105,
+      "boxed_rate": 0.9719484457922669,
+      "truncated_rate": 0.014404852160727824,
+      "avg_tokens": 316.8392721758908,
+      "seconds": 69.1
+    },
+    "math500": {
+      "n": 500,
+      "accuracy": 0.332,
+      "boxed_rate": 0.834,
+      "truncated_rate": 0.164,
+      "avg_tokens": 582.924,
+      "seconds": 67.9
+    },
+    "svamp": {
+      "n": 1000,
+      "accuracy": 0.616,
+      "boxed_rate": 0.984,
+      "truncated_rate": 0.012,
+      "avg_tokens": 229.169,
+      "seconds": 37.6
+    }
+  },
+  "seconds": 322.4
+}
