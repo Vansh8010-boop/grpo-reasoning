@@ -63,7 +63,7 @@ class VLLMBackend:
         a = self.args
         sp = SamplingParams(n=a.n_samples, temperature=a.temperature, top_p=a.top_p, max_tokens=a.max_tokens, seed=a.seed)
         lora = LoRARequest("adapter", 1, a.adapter) if a.adapter else None
-        outs = self.llm.generate(prompts, sp, lora_request=lora)
+        outs = self.llm.generate(prompts, sp, lora_request=lora, use_tqdm=False)
         return [[(c.text, len(c.token_ids), c.finish_reason == "length") for c in o.outputs] for o in outs]
 
 
