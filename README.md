@@ -3,7 +3,7 @@
 Teaching Qwen2.5-1.5B-Instruct to solve math problems better with GRPO
 (Group Relative Policy Optimization), implemented from scratch in PyTorch with LoRA.
 
-Status: week 1 done (evaluation harness and baselines, see [docs/week1.md](docs/week1.md)).
+Status: week 2 done. Week 1 (evaluation, baselines): [docs/week1.md](docs/week1.md). Week 2 (rewards, rollouts): [docs/week2.md](docs/week2.md).
 
 | Model | GSM8K test | MATH-500 | SVAMP | Avg response length |
 |---|---|---|---|---|
