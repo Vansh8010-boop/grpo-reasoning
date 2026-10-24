@@ -1,0 +1,37 @@
+# Install torch first, from the CUDA 12.8 index:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+# Then: pip install -r requirements.txt
+#
+# vLLM is NOT listed here: it has no native Windows build. Install it on the
+# rented Linux GPU / Colab / Kaggle (pip install vllm), or locally under WSL2.
+
+# core training
+transformers
+peft
+accelerate
+datasets
+safetensors
+
+# reference implementation only (compare numbers, never import into grpo/)
+trl
+
+# logging + configs
+wandb
+pyyaml
+huggingface_hub
+kaggle
+
+# answer parsing / normalization (MATH-500 LaTeX answers)
+sympy
+math-verify[antlr4_13_2]
+latex2sympy2_extended
+
+# analysis + plots
+numpy
+pandas
+matplotlib
+jupyter
+ipykernel
+
+# tests
+pytest
