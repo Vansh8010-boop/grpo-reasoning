@@ -1,0 +1,27 @@
+{
+  "config": {
+    "model": "D:/mini-infer/models/Qwen2.5-0.5B-Instruct",
+    "n_problems": 16,
+    "group_size": 8,
+    "temperature": 0.9,
+    "max_tokens": 512,
+    "batch_size": 4,
+    "dtype": "bfloat16",
+    "seed": 0,
+    "out": "results/rollouts/base-0.5b-16"
+  },
+  "summary": {
+    "groups": 16,
+    "samples": 128,
+    "accuracy": 0.4296875,
+    "format_rate": 0.8046875,
+    "reward_mean": 0.590625,
+    "groups_all_correct": 0.1875,
+    "groups_all_wrong": 0.25,
+    "groups_mixed": 0.5625,
+    "groups_zero_reward_std": 0.25,
+    "truncated_rate": 0.1328125,
+    "avg_tokens": 358.0078125,
+    "seconds": 219.5
+  }
+}
