@@ -5,3 +5,5 @@ wandb/
 checkpoints/
 .ipynb_checkpoints/
 .env
+results/smoke-*/
+*.log
