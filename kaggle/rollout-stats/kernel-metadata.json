@@ -1,0 +1,14 @@
+{
+  "id": "vanshkulshrestha/grpo-rollout-stats",
+  "title": "grpo-rollout-stats",
+  "code_file": "rollout-stats.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
