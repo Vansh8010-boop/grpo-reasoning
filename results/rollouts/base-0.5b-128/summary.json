@@ -1,0 +1,27 @@
+{
+  "config": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "n_problems": 128,
+    "group_size": 8,
+    "temperature": 0.9,
+    "max_tokens": 512,
+    "batch_size": 16,
+    "dtype": "float16",
+    "seed": 0,
+    "out": "/kaggle/working/rollouts/base-0.5b"
+  },
+  "summary": {
+    "groups": 128,
+    "samples": 1024,
+    "accuracy": 0.4658203125,
+    "format_rate": 0.8505859375,
+    "reward_mean": 0.6359374999999999,
+    "groups_all_correct": 0.1484375,
+    "groups_all_wrong": 0.1796875,
+    "groups_mixed": 0.671875,
+    "groups_zero_reward_std": 0.1484375,
+    "truncated_rate": 0.0888671875,
+    "avg_tokens": 321.2880859375,
+    "seconds": 401.2
+  }
+}
