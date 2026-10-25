@@ -3,7 +3,7 @@
 Teaching Qwen2.5-1.5B-Instruct to solve math problems better with GRPO
 (Group Relative Policy Optimization), implemented from scratch in PyTorch with LoRA.
 
-Status: week 2 done. Week 1 (evaluation, baselines): [docs/week1.md](docs/week1.md). Week 2 (rewards, rollouts): [docs/week2.md](docs/week2.md).
+Status: week 3 done: GRPO on 0.5B raised validation accuracy 62.6% → 69.2% ([docs/week3.md](docs/week3.md)). Earlier: [week 1](docs/week1.md) (evaluation, baselines), [week 2](docs/week2.md) (rewards, rollouts).
 
 | Model | GSM8K test | MATH-500 | SVAMP | Avg response length |
 |---|---|---|---|---|
@@ -15,6 +15,13 @@ Status: week 2 done. Week 1 (evaluation, baselines): [docs/week1.md](docs/week1.
 ```
 python -m eval.harness --model Qwen/Qwen2.5-1.5B-Instruct --dtype float16 --out results/base-1.5b
 python -m pytest -q tests/
+```
+
+## Reproduce training
+
+```
+python -m grpo.train --config configs/grpo-0.5b.yaml          # 250 steps, ~6.5 h on a T4
+python analysis/plot_training.py checkpoints/grpo-0.5b --out analysis/plots/run.png
 ```
 
 ## Layout
