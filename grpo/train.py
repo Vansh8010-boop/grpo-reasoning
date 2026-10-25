@@ -33,6 +33,9 @@ from grpo.loss import build_batch, grpo_loss, token_logprobs
 from grpo.rewards import RewardConfig
 from grpo.rollout import rollout, sample_groups, summarize
 
+# Characters outside ASCII and common math symbols. A rising share of answers full of these is the
+# early sign of the collapse seen at lr 3e-5 (docs/week3.md); greedy validation does not show it.
+NON_MATH = re.compile(r"[^\x00-\x7F°×÷−–—’“”…√π∞≤≥≠·]")
 SELF_CHECK = re.compile(r"\b(wait|let me (?:verify|check|double[- ]check|re-?check)|double[- ]check|verify)\b", re.I)
 
 
@@ -110,14 +113,22 @@ def load_policy(cfg):
     return model, tok
 
 
-def validate(model, tok, problems, cfg):
-    """Greedy accuracy on held-out GSM8K train problems (for picking checkpoints, never the test set)."""
+def validate(model, tok, problems, cfg, step):
+    """Greedy accuracy on held-out GSM8K train problems (for picking checkpoints, never the test set).
+
+    Per-problem results go to val-<step>.jsonl so checkpoints can be compared problem by problem.
+    """
     model.eval()
     prompts = [build_prompt(tok, p["question"]) for p in problems]
     outs = sample_groups(model, tok, prompts, 1, 0.0, cfg.max_tokens, cfg.val_batch_size)
     gens = [g[0] for _, g in outs]
+    correct = [grade(t, p["gold"])["correct"] for p, (t, _, _) in zip(problems, gens)]
+    with open(os.path.join(cfg.run_dir, f"val-{step:04d}.jsonl"), "w", encoding="utf-8") as f:
+        for p, (t, ids, tr), c in zip(problems, gens, correct):
+            f.write(json.dumps({"id": p["id"], "gold": p["gold"], "correct": c, "n_tokens": len(ids),
+                                "truncated": tr, "response": t}, ensure_ascii=False) + "\n")
     return {
-        "val_accuracy": sum(grade(t, p["gold"])["correct"] for p, (t, _, _) in zip(problems, gens)) / len(problems),
+        "val_accuracy": sum(correct) / len(problems),
         "val_avg_tokens": sum(len(ids) for _, ids, _ in gens) / len(gens),
         "val_truncated": sum(tr for _, _, tr in gens) / len(gens),
     }
@@ -236,7 +247,7 @@ def main(argv=None):
 
     if start == 0 and cfg.eval_every:
         t = time.time()
-        log({"step": 0, **validate(model, tok, val, cfg), "val_seconds": round(time.time() - t, 1)})
+        log({"step": 0, **validate(model, tok, val, cfg, 0), "val_seconds": round(time.time() - t, 1)})
 
     for step in range(start + 1, cfg.steps + 1):
         idx = [order[(i) % len(order)] for i in range((step - 1) * cfg.problems_per_step, step * cfg.problems_per_step)]
@@ -262,6 +273,7 @@ def main(argv=None):
             "truncated": roll["truncated_rate"],
             "avg_tokens": roll["avg_tokens"],
             "self_check_rate": sum(bool(SELF_CHECK.search(s.response)) for s in flat) / len(flat),
+            "garbage_rate": sum(len(NON_MATH.findall(s.response)) > 5 for s in flat) / len(flat),
             **stats,
             "lr": scheduler.get_last_lr()[0],
             "gen_seconds": round(t1 - t0, 1),
@@ -277,7 +289,7 @@ def main(argv=None):
                                             "rewards": s.rewards, "n_tokens": s.n_tokens}, ensure_ascii=False) + "\n")
         if cfg.eval_every and step % cfg.eval_every == 0:
             t = time.time()
-            row.update(validate(model, tok, val, cfg), val_seconds=round(time.time() - t, 1))
+            row.update(validate(model, tok, val, cfg, step), val_seconds=round(time.time() - t, 1))
         log(row)
         print(f"step {step:4d} reward {row['reward']:.3f} acc {row['accuracy']:.3f} kl {row['kl']:.4f} "
               f"len {row['avg_tokens']:.0f} mixed {row['groups_mixed']:.2f} gnorm {row['grad_norm']:.3f} "
