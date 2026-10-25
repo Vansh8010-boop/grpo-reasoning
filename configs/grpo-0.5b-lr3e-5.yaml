@@ -1,0 +1,25 @@
+# Week 3 run, same as grpo-0.5b.yaml but 3x the learning rate.
+model: Qwen/Qwen2.5-0.5B-Instruct
+run_name: grpo-0.5b-lr3e-5
+dtype: float16
+steps: 250
+problems_per_step: 16
+group_size: 8
+temperature: 0.9
+max_tokens: 512
+gen_batch_size: 16
+micro_batch_size: 8
+lr: 3.0e-5
+warmup_steps: 10
+clip_eps: 0.2
+kl_beta: 0.04
+lora_r: 16
+lora_alpha: 32
+correct_weight: 1.0
+format_weight: 0.2
+length_weight: 0.0
+eval_every: 50
+val_size: 500
+val_batch_size: 64
+save_every: 50
+samples_every: 50
