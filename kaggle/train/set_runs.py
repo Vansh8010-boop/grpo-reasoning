@@ -8,7 +8,9 @@ import sys
 
 p = "kaggle/train/train.ipynb"
 nb = json.load(open(p, encoding="utf-8"))
-runs = [shlex.split(a) + ["out_dir=/kaggle/working/checkpoints"] for a in sys.argv[1:]]
+runs = [shlex.split(a) for a in sys.argv[1:]]
+for r in runs:  # out_dir must sit inside the (single) --set list
+    r += ([] if "--set" in r else ["--set"]) + ["out_dir=/kaggle/working/checkpoints"]
 assert 1 <= len(runs) <= 2, "Kaggle gives two GPUs"
 nb["cells"][-1]["source"] = [
     f"RUNS = {json.dumps(runs)}\n",
