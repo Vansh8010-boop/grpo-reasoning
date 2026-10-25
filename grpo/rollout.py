@@ -40,17 +40,18 @@ class Group:
 
 
 def sample_groups(model, tokenizer, prompts, group_size, temperature, max_new_tokens, batch_size):
-    """For each prompt, return (prompt_ids, [(text, response_ids, truncated)] * group_size)."""
+    """For each prompt, return (prompt_ids, [(text, response_ids, truncated)] * group_size).
+
+    temperature 0 means greedy decoding (used for validation).
+    """
     import torch
     from transformers import GenerationConfig
 
     eos = model.generation_config.eos_token_id
     eos = set(eos if isinstance(eos, list) else [eos])
+    sampling = dict(do_sample=True, temperature=temperature, top_k=0, top_p=1.0) if temperature > 0 else dict(do_sample=False)
     gen_cfg = GenerationConfig(
-        do_sample=True,
-        temperature=temperature,
-        top_k=0,
-        top_p=1.0,
+        **sampling,
         repetition_penalty=1.0,
         max_new_tokens=max_new_tokens,
         num_return_sequences=group_size,

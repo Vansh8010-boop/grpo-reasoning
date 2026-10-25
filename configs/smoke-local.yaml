@@ -1,0 +1,15 @@
+# Tiny local run on the RTX 3050 (6 GB): proves the loop runs end to end, not that it learns.
+model: D:/mini-infer/models/Qwen2.5-0.5B-Instruct
+run_name: smoke-local
+dtype: bfloat16
+steps: 3
+problems_per_step: 4
+group_size: 4
+max_tokens: 256
+gen_batch_size: 4
+micro_batch_size: 4
+eval_every: 3
+val_size: 16
+val_batch_size: 16
+save_every: 3
+samples_every: 3
