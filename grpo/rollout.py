@@ -8,6 +8,7 @@ log-probabilities the GRPO loss will compute. (Qwen's generation_config turns
 top_k=20 and a repetition penalty on by default; we override all of it.)
 """
 import argparse
+import functools
 import json
 import os
 import random
@@ -77,9 +78,11 @@ def sample_groups(model, tokenizer, prompts, group_size, temperature, max_new_to
     return out
 
 
-def rollout(model, tokenizer, problems, reward_cfg, group_size=8, temperature=0.9, batch_size=4):
+def rollout(generate, tokenizer, problems, reward_cfg, group_size=8, temperature=0.9, batch_size=4):
+    """generate(prompts, n, temperature, max_tokens, batch_size) has sample_groups' signature minus
+    model and tokenizer: functools.partial(sample_groups, model, tokenizer), or the vLLM path in train.py."""
     prompts = [build_prompt(tokenizer, p["question"]) for p in problems]
-    raw = sample_groups(model, tokenizer, prompts, group_size, temperature, reward_cfg.max_tokens, batch_size)
+    raw = generate(prompts, group_size, temperature, reward_cfg.max_tokens, batch_size)
     groups = []
     for prob, (prompt_ids, gens) in zip(problems, raw):
         samples = []
@@ -165,7 +168,8 @@ def main(argv=None):
     problems = random.Random(a.seed).sample(load_gsm8k("train"), a.n_problems)
 
     t = time.time()
-    groups = rollout(model, tok, problems, RewardConfig(max_tokens=a.max_tokens), a.group_size, a.temperature, a.batch_size)
+    generate = functools.partial(sample_groups, model, tok)
+    groups = rollout(generate, tok, problems, RewardConfig(max_tokens=a.max_tokens), a.group_size, a.temperature, a.batch_size)
     summary = summarize(groups)
     summary["seconds"] = round(time.time() - t, 1)
     save(groups, summary, vars(a), a.out)
