@@ -11,9 +11,13 @@ One step:
 The reference model is the base model: the same weights with the LoRA adapter
 switched off, so it costs no extra memory. Re-running the same command resumes
 from <out_dir>/<run_name>/ckpt-latest.
+
+rollout_backend=vllm generates on a second GPU (grpo/vllm_worker.py) with the
+adapter saved after the previous step; hf generates with the training model itself.
 """
 import argparse
 import dataclasses
+import functools
 import json
 import math
 import os
@@ -52,7 +56,13 @@ class TrainConfig:
     group_size: int = 8
     temperature: float = 0.9
     max_tokens: int = 512
-    gen_batch_size: int = 16  # problems per generate call
+    gen_batch_size: int = 16  # problems per generate call (hf backend)
+    rollout_backend: str = "hf"  # "hf" or "vllm"
+    vllm_gpu: int = 1
+    vllm_gpu_mem: float = 0.85
+    # training problems: optionally drop ones the base model already always solves
+    train_filter: str = ""  # jsonl from grpo/solve_rates.py
+    filter_max_solved: int = 8  # drop problems the base model solved >= this many times out of 8
     # optimization
     micro_batch_size: int = 4  # answers per forward/backward
     lr: float = 1e-5
@@ -61,6 +71,7 @@ class TrainConfig:
     clip_eps: float = 0.2
     kl_beta: float = 0.04
     normalize_std: bool = True
+    skip_zero_std_groups: bool = False  # drop groups whose answers all got the same reward (zero advantage)
     gradient_checkpointing: bool = True
     # LoRA
     lora_r: int = 16
@@ -113,14 +124,41 @@ def load_policy(cfg):
     return model, tok
 
 
-def validate(model, tok, problems, cfg, step):
+def make_generator(cfg, model, tok):
+    """Returns (generate, close). generate has sample_groups' signature minus model and tokenizer."""
+    if cfg.rollout_backend == "hf":
+        return functools.partial(sample_groups, model, tok), lambda: None
+    from grpo.vllm_worker import VLLMWorker
+
+    worker = VLLMWorker(cfg.model, gpu=cfg.vllm_gpu, dtype=cfg.dtype, gpu_mem=cfg.vllm_gpu_mem,
+                        max_lora_rank=cfg.lora_r, seed=cfg.seed)
+    adapter_dir = os.path.join(cfg.run_dir, "rollout-adapter")
+    eos = model.generation_config.eos_token_id
+    eos = eos if isinstance(eos, list) else [eos]
+    calls = [0]
+
+    def generate(prompts, n, temperature, max_tokens, batch_size=None):
+        model.save_pretrained(adapter_dir)  # current weights -> vLLM, under a new LoRA id
+        calls[0] += 1
+        prompt_ids = [tok(p, add_special_tokens=False)["input_ids"] for p in prompts]
+        out = worker.generate(prompt_ids, n, temperature, max_tokens, adapter_dir, calls[0])
+        fixed = []
+        for group in out:
+            # The training loss must see the EOS token the model stopped on; add it if vLLM left it out.
+            fixed.append([(t, ids if trunc or (ids and ids[-1] in eos) else ids + [eos[0]], trunc)
+                          for t, ids, trunc in group])
+        return list(zip(prompt_ids, fixed))
+
+    return generate, worker.close
+
+
+def validate(generate, tok, problems, cfg, step):
     """Greedy accuracy on held-out GSM8K train problems (for picking checkpoints, never the test set).
 
     Per-problem results go to val-<step>.jsonl so checkpoints can be compared problem by problem.
     """
-    model.eval()
     prompts = [build_prompt(tok, p["question"]) for p in problems]
-    outs = sample_groups(model, tok, prompts, 1, 0.0, cfg.max_tokens, cfg.val_batch_size)
+    outs = generate(prompts, 1, 0.0, cfg.max_tokens, cfg.val_batch_size)
     gens = [g[0] for _, g in outs]
     correct = [grade(t, p["gold"])["correct"] for p, (t, _, _) in zip(problems, gens)]
     with open(os.path.join(cfg.run_dir, f"val-{step:04d}.jsonl"), "w", encoding="utf-8") as f:
@@ -138,8 +176,11 @@ def train_step(model, tok, groups, cfg, optimizer, scaler):
     """One optimizer step over all answers in groups. Returns loss/KL/clip stats."""
     rewards = [[s.rewards["total"] for s in g.samples] for g in groups]
     adv = group_advantages(rewards, normalize_std=cfg.normalize_std)
-    items = [(g.prompt_ids, s.response_ids, adv[i, j].item())
-             for i, g in enumerate(groups) for j, s in enumerate(g.samples)]
+    keep = [i for i, r in enumerate(rewards) if not (cfg.skip_zero_std_groups and len(set(r)) == 1)]
+    items = [(groups[i].prompt_ids, s.response_ids, adv[i, j].item())
+             for i in keep for j, s in enumerate(groups[i].samples)]
+    if not items:  # every group had zero spread: nothing to learn from this batch
+        return {"loss": 0.0, "kl": 0.0, "clip_frac": 0.0, "grad_norm": 0.0, "adv_abs_mean": 0.0, "groups_trained": 0}
     items.sort(key=lambda x: len(x[0]) + len(x[1]))  # similar lengths per micro-batch -> less padding
 
     model.train()
@@ -172,6 +213,7 @@ def train_step(model, tok, groups, cfg, optimizer, scaler):
         "clip_frac": totals["clipped_tokens"] / max(totals["tokens"], 1),
         "grad_norm": grad_norm,
         "adv_abs_mean": adv.abs().mean().item(),
+        "groups_trained": len(keep),
     }
 
 
@@ -221,6 +263,11 @@ def main(argv=None):
     reward_cfg = RewardConfig(cfg.correct_weight, cfg.format_weight, cfg.length_weight, cfg.max_tokens)
 
     train = load_gsm8k("train")
+    if cfg.train_filter:
+        solved = {r["id"]: r["n_correct"] for r in map(json.loads, open(cfg.train_filter))}
+        before = len(train)
+        train = [p for p in train if solved[p["id"]] < cfg.filter_max_solved]
+        print(f"train filter: kept {len(train)} of {before} problems", flush=True)
     order = list(range(len(train)))
     random.Random(cfg.seed).shuffle(order)  # step k always gets the same problems, so resuming needs no data state
     val = load_gsm8k("val")[: cfg.val_size]
@@ -238,6 +285,7 @@ def main(argv=None):
         wandb.init(project=cfg.wandb_project, name=cfg.run_name, id=cfg.run_name, resume="allow",
                    config=dataclasses.asdict(cfg))
     metrics_path = os.path.join(cfg.run_dir, "metrics.jsonl")
+    generate, close_generator = make_generator(cfg, model, tok)
 
     def log(row):
         with open(metrics_path, "a") as f:
@@ -247,7 +295,7 @@ def main(argv=None):
 
     if start == 0 and cfg.eval_every:
         t = time.time()
-        log({"step": 0, **validate(model, tok, val, cfg, 0), "val_seconds": round(time.time() - t, 1)})
+        log({"step": 0, **validate(generate, tok, val, cfg, 0), "val_seconds": round(time.time() - t, 1)})
 
     for step in range(start + 1, cfg.steps + 1):
         idx = [order[(i) % len(order)] for i in range((step - 1) * cfg.problems_per_step, step * cfg.problems_per_step)]
@@ -255,7 +303,7 @@ def main(argv=None):
 
         t0 = time.time()
         model.eval()
-        groups = rollout(model, tok, problems, reward_cfg, cfg.group_size, cfg.temperature, cfg.gen_batch_size)
+        groups = rollout(generate, tok, problems, reward_cfg, cfg.group_size, cfg.temperature, cfg.gen_batch_size)
         t1 = time.time()
         stats = train_step(model, tok, groups, cfg, optimizer, scaler)
         scheduler.step()
@@ -289,7 +337,8 @@ def main(argv=None):
                                             "rewards": s.rewards, "n_tokens": s.n_tokens}, ensure_ascii=False) + "\n")
         if cfg.eval_every and step % cfg.eval_every == 0:
             t = time.time()
-            row.update(validate(model, tok, val, cfg, step), val_seconds=round(time.time() - t, 1))
+            model.eval()
+            row.update(validate(generate, tok, val, cfg, step), val_seconds=round(time.time() - t, 1))
         log(row)
         print(f"step {step:4d} reward {row['reward']:.3f} acc {row['accuracy']:.3f} kl {row['kl']:.4f} "
               f"len {row['avg_tokens']:.0f} mixed {row['groups_mixed']:.2f} gnorm {row['grad_norm']:.3f} "
@@ -298,6 +347,7 @@ def main(argv=None):
         if step % cfg.save_every == 0 or step == cfg.steps:
             save_checkpoint(model, optimizer, scaler, scheduler, step, cfg, keep_adapter=True)
 
+    close_generator()
     if wandb:
         wandb.finish()
 
