@@ -1,0 +1,46 @@
+{
+  "config": {
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "adapter": "/kaggle/input/datasets/vanshkulshrestha/grpo-1p5b-ckpt-0350",
+    "datasets": "gsm8k,math500,svamp",
+    "backend": "vllm",
+    "limit": null,
+    "n_samples": 1,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "max_tokens": 1024,
+    "dtype": "float16",
+    "seed": 0,
+    "batch_size": 16,
+    "gpu_mem": 0.85,
+    "max_model_len": 2048,
+    "out": "/kaggle/working/results/grpo-1.5b-step350"
+  },
+  "datasets": {
+    "gsm8k": {
+      "n": 1319,
+      "accuracy": 0.7573919636087946,
+      "boxed_rate": 0.9893858984078847,
+      "truncated_rate": 0.01061410159211524,
+      "avg_tokens": 299.0401819560273,
+      "seconds": 454.7
+    },
+    "math500": {
+      "n": 500,
+      "accuracy": 0.568,
+      "boxed_rate": 0.892,
+      "truncated_rate": 0.112,
+      "avg_tokens": 522.624,
+      "seconds": 325.4
+    },
+    "svamp": {
+      "n": 1000,
+      "accuracy": 0.853,
+      "boxed_rate": 0.974,
+      "truncated_rate": 0.026,
+      "avg_tokens": 221.682,
+      "seconds": 274.9
+    }
+  },
+  "seconds": 1280.9
+}
