@@ -36,7 +36,7 @@ PANELS = [
     ("kl", "KL to reference (10-step avg)", True),
     ("avg_tokens", "response length, tokens (10-step avg)", True),
     ("self_check_rate", "answers with self-check phrases (10-step avg)", True),
-    ("groups_mixed", "groups with mixed correctness (10-step avg)", True),
+    ("garbage_rate", "sampled answers with garbage tokens (10-step avg)", True),
 ]
 
 
