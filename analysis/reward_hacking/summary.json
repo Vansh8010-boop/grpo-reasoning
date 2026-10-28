@@ -1,0 +1,18 @@
+{
+  "high_reward_answers": 1297,
+  "by_flag": {
+    "garbled": 1,
+    "no_work": 0,
+    "answer_early": 4,
+    "unsupported": 5,
+    "multi_answer": 21
+  },
+  "by_run_and_flag": {
+    "grpo-1.5b/multi_answer": 10,
+    "grpo-1.5b/unsupported": 4,
+    "grpo-1.5b/answer_early": 4,
+    "grpo-0.5b/multi_answer": 11,
+    "grpo-0.5b/garbled": 1,
+    "grpo-0.5b/unsupported": 1
+  }
+}
