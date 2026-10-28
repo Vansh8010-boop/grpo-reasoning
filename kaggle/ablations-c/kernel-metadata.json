@@ -1,0 +1,14 @@
+{
+  "id": "vanshkulshrestha/grpo-ablations-c",
+  "title": "grpo-ablations-c",
+  "code_file": "ablations-c.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
