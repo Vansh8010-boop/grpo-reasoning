@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GRPO From Scratch</title>
+<meta name="description" content="Teaching Qwen2.5 to reason better at grade-school math with GRPO implemented from scratch in PyTorch: results, method, training dynamics, ablations and failure analysis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Reinforcement learning · LLM reasoning</p>
+    <h1>GRPO From Scratch</h1>
+    <p class="lede">Group Relative Policy Optimization, the RL method behind DeepSeek-R1, written in plain PyTorch
+      and used to teach a small open model to solve grade-school math more reliably.</p>
+    <div class="headline">
+      <div class="big">
+        <span class="num" id="h-base">49.1%</span>
+        <span class="arrow">→</span>
+        <span class="num accent" id="h-trained">53.3%</span>
+      </div>
+      <p class="caption">Qwen2.5-0.5B-Instruct on GSM8K test (1,319 problems), greedy decoding.
+        <span id="h-paired">153 problems fixed, 98 broken, paired sign test p = 0.001.</span></p>
+      <p class="caption muted">The same recipe did <strong>not</strong> help the 1.5B model (75.8% → 75.7%).
+        <a href="#didnt-work">Why</a>.</p>
+    </div>
+    <nav class="links">
+      <a class="btn" href="https://github.com/Vansh8010-boop/grpo-reasoning">Code on GitHub</a>
+      <a class="btn ghost" href="https://github.com/Vansh8010-boop/grpo-reasoning/blob/main/docs/report.md">Write-up</a>
+      <a class="btn ghost" id="hf-link" href="https://github.com/Vansh8010-boop/grpo-reasoning/tree/main/release">Model (LoRA adapter)</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="explorer">
+    <h2>Before and after</h2>
+    <p>Pick a GSM8K test problem to compare the base model's full answer with the GRPO-trained one.
+      Most examples are problems training fixed; a few are ones it broke, because that happened too (98 times).</p>
+    <label class="select">
+      <span>Problem</span>
+      <select id="ex-select"></select>
+    </label>
+    <div class="question" id="ex-question"></div>
+    <div class="compare">
+      <article class="answer" id="ex-base"></article>
+      <article class="answer" id="ex-grpo"></article>
+    </div>
+  </section>
+
+  <section id="method">
+    <h2>How GRPO works</h2>
+    <p>For each problem the model writes several answers. A program checks which are correct, and each answer
+      is scored against the average of its own group. Above-average answers are made more likely, below-average
+      ones less likely. No human labels and no separate value network are needed.</p>
+    <figure class="diagram">
+      <svg viewBox="0 0 860 170" role="img" aria-label="GRPO training loop: problem, sample 8 answers, check answers, group-relative advantages, policy update, back to the model">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker></defs>
+        <g class="node"><rect x="10" y="50" width="140" height="64" rx="10"/><text x="80" y="78">Math problem</text><text x="80" y="98" class="sub">from GSM8K train</text></g>
+        <g class="node"><rect x="185" y="50" width="140" height="64" rx="10"/><text x="255" y="78">Sample 8 answers</text><text x="255" y="98" class="sub">vLLM, temp 0.9</text></g>
+        <g class="node"><rect x="360" y="50" width="140" height="64" rx="10"/><text x="430" y="78">Check answers</text><text x="430" y="98" class="sub">correct + format</text></g>
+        <g class="node"><rect x="535" y="50" width="140" height="64" rx="10"/><text x="605" y="78">Group advantage</text><text x="605" y="98" class="sub">(R − mean) / std</text></g>
+        <g class="node hl"><rect x="710" y="50" width="140" height="64" rx="10"/><text x="780" y="78">Update LoRA</text><text x="780" y="98" class="sub">clipped loss + KL</text></g>
+        <path d="M150 82 H183" class="edge" marker-end="url(#ah)"/><path d="M325 82 H358" class="edge" marker-end="url(#ah)"/>
+        <path d="M500 82 H533" class="edge" marker-end="url(#ah)"/><path d="M675 82 H708" class="edge" marker-end="url(#ah)"/>
+        <path d="M780 114 V150 H255 V116" class="edge back" marker-end="url(#ah)"/>
+        <text x="518" y="164" class="sub">updated weights are copied to the sampler every step</text>
+      </svg>
+    </figure>
+    <div class="formula" id="f-adv"></div>
+    <div class="formula" id="f-obj"></div>
+    <ul class="plain">
+      <li><strong>r</strong> is how much more (or less) likely the updated model makes each word of an answer than the model that wrote it.</li>
+      <li><strong>Clipping</strong> at 1 ± ε (0.2) stops one batch from moving the model too far.</li>
+      <li><strong>The KL term</strong> (β = 0.04) pulls the model back toward the original, which here is the same weights with the LoRA adapter switched off.</li>
+      <li>Every term is computed only over the answer's tokens, never the prompt or padding: the most common silent bug in GRPO code, and the one the tests check hardest.</li>
+    </ul>
+  </section>
+
+  <section id="dynamics">
+    <h2>Training dynamics</h2>
+    <p>Curves averaged over 5-step windows. Validation is 500 held-out GSM8K <em>training-split</em> problems, used to pick checkpoints, never to report results.</p>
+    <div class="tabs" id="run-tabs" role="tablist"></div>
+    <p class="run-note" id="run-note"></p>
+    <div class="charts">
+      <div class="chart"><h3>Training reward</h3><div class="box"><canvas id="c-reward"></canvas></div></div>
+      <div class="chart"><h3>Validation accuracy (%)</h3><div class="box"><canvas id="c-val"></canvas></div></div>
+      <div class="chart"><h3>KL to the base model</h3><div class="box"><canvas id="c-kl"></canvas></div></div>
+      <div class="chart"><h3>Sampled answers with garbage tokens</h3><div class="box"><canvas id="c-garbage"></canvas></div></div>
+    </div>
+  </section>
+
+  <section id="ablations">
+    <h2>Ablations</h2>
+    <p>Six one-change experiments on the 0.5B model, 250 steps each, scored on GSM8K test at the final step.
+      Every variant beat the base model; <strong>none was significantly different from the baseline run</strong>.</p>
+    <div class="chart wide"><div class="box"><canvas id="c-abl"></canvas></div></div>
+    <dl class="findings">
+      <dt>Group size</dt><dd>With 4 answers per problem, 42% of groups were all right or all wrong and taught nothing (26% at 8, 15% at 16). Eight is a sound default.</dd>
+      <dt>KL penalty</dt><dd>Removing it let the model drift 6× further and write 13% shorter answers, with the same accuracy.</dd>
+      <dt>Format reward</dt><dd>Not needed on GSM8K: the model learned to box its answers anyway, because correct answers were already mostly boxed.</dd>
+      <dt>Advantage normalization</dt><dd>Without dividing by the group's spread, updates are about half as large; it behaved like a lower learning rate.</dd>
+      <dt>Learning rate</dt><dd>3e-5 collapsed into garbage tokens and ended with the smallest gain.</dd>
+    </dl>
+  </section>
+
+  <section id="gallery">
+    <h2>Reward hacking hunt</h2>
+    <p>All 1,297 high-reward training answers were screened for answers that earn reward without honest reasoning,
+      and every flagged one was read. Two were questionable. The exact-answer reward is hard to game on GSM8K.</p>
+    <div id="gallery-items"></div>
+  </section>
+
+  <section id="didnt-work">
+    <h2>What didn't work</h2>
+    <h3>The 1.5B model did not improve on the test set</h3>
+    <p>Validation rose from 83.4% to 88.4% (p = 0.001), yet GSM8K test stayed at 75.7% vs 75.8%: 87 problems fixed, 88 broken.
+      Near-duplicate problems were ruled out. At equal difficulty the <em>base</em> model is about 8 points better on GSM8K's training split than on
+      its test split, which points to contamination: the model has likely seen the training split before, so improving on it
+      did not transfer. A validation set drawn from that split was an optimistic guide.</p>
+    <h3>Late-training collapse</h3>
+    <p>Both the 0.5B run at lr 3e-5 and the 1.5B run after about 330 steps started producing garbage tokens in sampled answers,
+      while greedy validation looked fine. The garbled answers got near-zero reward, so this was not reward hacking; the cause is an open
+      optimization question. A garbage-rate metric logged every step caught it immediately.</p>
+    <h3>Compute</h3>
+    <p>Everything ran on Kaggle's free T4 GPUs (30 hours a week, two sessions at a time), which shaped the design:
+      LoRA, a 250-step budget for ablations, vLLM generation on the second GPU, and resuming runs across sessions.</p>
+  </section>
+
+  <section id="reproduce">
+    <h2>Reproduce it</h2>
+<pre><code>pip install -r requirements.txt            # plus torch for your CUDA version
+python -m pytest -q tests/                 # parser, rewards, advantages, loss
+python -m eval.harness --model Qwen/Qwen2.5-0.5B-Instruct --dtype float16 --out results/base-0.5b
+python -m grpo.train --config configs/grpo-0.5b.yaml    # 250 steps, about 6.5 h on one T4
+python -m eval.harness --model Qwen/Qwen2.5-0.5B-Instruct --dtype float16 \
+    --adapter checkpoints/grpo-0.5b/ckpt-0250 --out results/grpo-0.5b</code></pre>
+    <p>Every experiment has a config in <code>configs/</code>; every number on this page is generated from <code>results/</code> by <code>site/build_data.py</code>.</p>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>Built by <a href="https://vansh-kulshrestha.vercel.app">Vansh Kulshrestha</a>. Model: Qwen2.5-Instruct. Data: GSM8K, SVAMP, MATH-500.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

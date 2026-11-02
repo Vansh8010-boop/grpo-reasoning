@@ -1,0 +1,46 @@
+{
+ "0.5b": {
+  "gsm8k": {
+   "base": 49.1,
+   "trained": 53.3,
+   "fixed": 153,
+   "broken": 98,
+   "p": 0.0006,
+   "n": 1319
+  },
+  "svamp": {
+   "base": 61.6,
+   "trained": 63.7,
+   "fixed": 107,
+   "broken": 86,
+   "p": 0.1498,
+   "n": 1000
+  }
+ },
+ "1.5b": {
+  "gsm8k": {
+   "base": 75.8,
+   "trained": 75.7,
+   "fixed": 87,
+   "broken": 88,
+   "p": 1.0,
+   "n": 1319
+  },
+  "math500": {
+   "base": 56.4,
+   "trained": 56.8,
+   "fixed": 45,
+   "broken": 43,
+   "p": 0.9152,
+   "n": 500
+  },
+  "svamp": {
+   "base": 83.4,
+   "trained": 85.3,
+   "fixed": 74,
+   "broken": 55,
+   "p": 0.1127,
+   "n": 1000
+  }
+ }
+}
