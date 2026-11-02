@@ -1,0 +1,38 @@
+{
+  "config": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "adapter": "/kaggle/input/datasets/vanshkulshrestha/grpo-0p5b-ablation-adapters/abl-kl001/ckpt-0250",
+    "datasets": "gsm8k,svamp",
+    "backend": "vllm",
+    "limit": null,
+    "n_samples": 1,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "max_tokens": 1024,
+    "dtype": "float16",
+    "seed": 0,
+    "batch_size": 16,
+    "gpu_mem": 0.85,
+    "max_model_len": 2048,
+    "out": "/kaggle/working/results/abl-kl001"
+  },
+  "datasets": {
+    "gsm8k": {
+      "n": 1319,
+      "accuracy": 0.5291887793783169,
+      "boxed_rate": 0.9931766489764974,
+      "truncated_rate": 0.006823351023502654,
+      "avg_tokens": 293.9651250947688,
+      "seconds": 222.5
+    },
+    "svamp": {
+      "n": 1000,
+      "accuracy": 0.587,
+      "boxed_rate": 0.987,
+      "truncated_rate": 0.013,
+      "avg_tokens": 219.53,
+      "seconds": 133.4
+    }
+  },
+  "seconds": 434.7
+}
