@@ -1,0 +1,16 @@
+{
+  "id": "vanshkulshrestha/grpo-eval-ablations",
+  "title": "grpo-eval-ablations",
+  "code_file": "eval-ablations.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "vanshkulshrestha/grpo-0p5b-ablation-adapters"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}
