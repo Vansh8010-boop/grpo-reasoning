@@ -19,7 +19,7 @@ GSM8K test (75.8% → 75.7%), although held-out validation rose 5 points; the wr
 Greedy decoding, 1,024 new tokens, vLLM fp16, identical prompt and answer parser before and after.
 
 - **Write-up:** [docs/report.md](docs/report.md) (method, results, ablations, what didn't work)
-- **Website:** `site/` (before/after explorer, training curves, ablations, reward-hacking gallery)
+- **Website:** https://grpo-reasoning-site.vercel.app (before/after explorer, training curves, ablations, reward-hacking gallery; source in `site/`)
 - **Model:** the 0.5B LoRA adapter and model card are in [release/](release/)
 - **Weekly notes:** [week 1](docs/week1.md) evaluation and baselines · [week 2](docs/week2.md) rewards and rollouts ·
   [week 3](docs/week3.md) GRPO on 0.5B · [week 4](docs/week4.md) 1.5B main run · [week 5](docs/week5.md) ablations and analysis
