@@ -50,7 +50,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 base = "Qwen/Qwen2.5-0.5B-Instruct"
 tok = AutoTokenizer.from_pretrained(base)
-model = PeftModel.from_pretrained(AutoModelForCausalLM.from_pretrained(base), "Vansh8010/qwen2.5-0.5b-grpo-gsm8k")
+model = PeftModel.from_pretrained(AutoModelForCausalLM.from_pretrained(base), "ArmedHipster/qwen2.5-0.5b-grpo-gsm8k")
 
 question = "Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?"
 messages = [{"role": "user", "content": question + "\nPlease reason step by step, and put your final answer within \\boxed{}."}]

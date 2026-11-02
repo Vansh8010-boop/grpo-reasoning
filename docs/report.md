@@ -9,7 +9,7 @@ Qwen2.5-0.5B-Instruct it raised GSM8K test accuracy from **49.1% to 53.3%** (153
 unchanged (75.8% → 75.7%), even though validation said +5 points. Working out why turned out to be
 the most useful part of the project.
 
-Code, configs and every result: https://github.com/Vansh8010-boop/grpo-reasoning
+Code, configs and every result: https://github.com/Vansh8010-boop/grpo-reasoning · Website: https://grpo-reasoning-site.vercel.app · Model: https://huggingface.co/ArmedHipster/qwen2.5-0.5b-grpo-gsm8k
 
 ## The method in one paragraph
 

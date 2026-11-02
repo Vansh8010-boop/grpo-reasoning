@@ -20,7 +20,7 @@ Greedy decoding, 1,024 new tokens, vLLM fp16, identical prompt and answer parser
 
 - **Write-up:** [docs/report.md](docs/report.md) (method, results, ablations, what didn't work)
 - **Website:** https://grpo-reasoning-site.vercel.app (before/after explorer, training curves, ablations, reward-hacking gallery; source in `site/`)
-- **Model:** the 0.5B LoRA adapter and model card are in [release/](release/)
+- **Model:** https://huggingface.co/ArmedHipster/qwen2.5-0.5b-grpo-gsm8k (0.5B LoRA adapter; card and upload script in [release/](release/))
 - **Weekly notes:** [week 1](docs/week1.md) evaluation and baselines · [week 2](docs/week2.md) rewards and rollouts ·
   [week 3](docs/week3.md) GRPO on 0.5B · [week 4](docs/week4.md) 1.5B main run · [week 5](docs/week5.md) ablations and analysis
 
